@@ -1,0 +1,121 @@
+using System.Collections;
+using UnityEngine;
+
+public class Slime : MonoBehaviour
+{
+    [SerializeField]
+    private Transform knight;
+    [SerializeField]
+    private float chaseDistanceThreshold = 3, attackDistanceThreshold = 0.5f;
+    [SerializeField]
+    private float attackDelay = 1;
+    private float passedTime = 1;
+    private bool isMoving;
+
+    private Animator m_Anim;
+
+    private int maxHealth = 100;
+    private int currentHealth;
+
+    private bool isDead = false;
+
+    private float m_LastHit;
+    private float m_ImmunityDelay = 1.0f;
+
+    [SerializeField] private float Speed;
+
+    private SpriteRenderer m_SpriteRenderer;
+
+    private Coroutine m_FlashCR;
+
+    private void Start()
+    {
+        currentHealth = maxHealth;
+        m_Anim = GetComponent<Animator>();
+    }
+
+    private void Update()
+    {
+        m_Anim.SetFloat("Speed", Speed);
+        if (knight == null) return;
+
+        if (isMoving)
+        {
+            Speed = 5f;
+        }
+        else
+        {
+            Speed = 0f;
+        }
+
+        float distance = Vector2.Distance(knight.position, transform.position);
+        if(distance < chaseDistanceThreshold)
+        {
+            isMoving = true;
+            if(distance <= attackDistanceThreshold)
+            {
+                if(passedTime >= attackDelay)
+                {
+                    passedTime = 0;
+
+                }
+            }
+            else
+            {
+                transform.position = Vector2.MoveTowards(transform.position, knight.position, Speed * Time.deltaTime);
+
+            }
+        } else
+        {
+            isMoving = false;
+        }
+        if(passedTime < attackDelay)
+        {
+            passedTime += Time.deltaTime;
+        }
+    }
+
+    public void TakeDamage(int damage)
+    {
+        if(m_LastHit + m_ImmunityDelay <= Time.time && !isDead)
+        {
+            Debug.Log("boo");
+            m_LastHit = Time.time;
+            currentHealth -= damage;
+
+            m_Anim.SetTrigger("Hurt");
+
+            if (currentHealth <= 0)
+            {
+                Die();
+            }
+        }
+
+        // Visual flash
+        if (m_FlashCR != null)
+        {
+            StopCoroutine(m_FlashCR);
+        }
+        m_FlashCR = StartCoroutine(CR_Flash());
+    }
+
+    void Die()
+    {
+        Debug.Log(name + " slayed");
+        isDead = true;
+        m_Anim.SetBool("Dead", true);
+        Destroy(gameObject, 2);
+    }
+
+    IEnumerator CR_Flash()
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            m_SpriteRenderer.color = Color.red;
+            yield return new WaitForSeconds(0.15f);
+            m_SpriteRenderer.color = Color.white;
+            yield return new WaitForSeconds(0.15f);
+        }
+    }
+
+}
